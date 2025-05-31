@@ -1,0 +1,8 @@
+- name: Validate deployed .NET Core App
+  hosts: localhost
+  tasks:
+    - name: Check homepage status
+      uri:
+        url: "https://dotnetwebapp-prod.azurewebsites.net"
+        method: GET
+        status_code: 200

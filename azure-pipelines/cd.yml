@@ -1,0 +1,58 @@
+trigger: none
+
+stages:
+- stage: Dev
+  jobs:
+  - deployment: DeployDev
+    environment: 'Dev'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureWebApp@1
+            inputs:
+              azureSubscription: 'AzureConnection'
+              appType: 'webApp'
+              appName: 'dotnetwebapp-dev'
+              package: '$(Pipeline.Workspace)/drop/**/*.zip'
+
+- stage: QA
+  dependsOn: Dev
+  condition: succeeded()
+  jobs:
+  - deployment: DeployQA
+    environment: 'QA'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - script: ./scripts/validate_qa.ps1
+            displayName: 'Validation'
+          - task: AzureWebApp@1
+            inputs:
+              azureSubscription: 'AzureConnection'
+              appType: 'webApp'
+              appName: 'dotnetwebapp-qa'
+              package: '$(Pipeline.Workspace)/drop/**/*.zip'
+
+- stage: Prod
+  dependsOn: QA
+  condition: succeeded()
+  approval:
+    - reviewers:
+        - group: 'Release Managers'
+  jobs:
+  - deployment: DeployProd
+    environment: 'Prod'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - script: ./scripts/validate_prod.ps1
+            displayName: 'Validation'
+          - task: AzureWebApp@1
+            inputs:
+              azureSubscription: 'AzureConnection'
+              appType: 'webApp'
+              appName: 'dotnetwebapp-prod'
+              package: '$(Pipeline.Workspace)/drop/**/*.zip'
